@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="efe8c574-823b-4387-a3f2-f8e3aa71bf5b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="8a2930ec-da74-45b3-86d1-a6a21d76f3d1" file="dev.properties" />
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="ae265b54-1a6a-4923-99f5-6076897845ec" >
+		<email:smtps-connection host="smtp.gmail.com" user="#[p('from.emailAddress')]" password="${from.emailAddressPassword}">
+			<tls:context >
+				<tls:trust-store insecure="true" />
+			</tls:context>
+			<email:properties />
+		</email:smtps-connection>
+	</email:smtp-config>
+	<flow name="dynamic-variable-muleFlow" doc:id="56f5a311-f954-45e2-80d3-db15a887df52" >
+		<http:listener doc:name="Listener" doc:id="ea95c793-fa20-4376-88d1-093a30f2ae28" config-ref="HTTP_Listener_config" path="/dynamic-var/*"/>
+		<set-variable value="#[attributes.queryString]" doc:name="Capturing the Query String" doc:id="d7b01235-be29-4149-83ef-ec6181fcfcc7" variableName="queryString"/>
+		<file:read doc:name="Reading the Source File" doc:id="4a827c34-ab22-4031-9e2a-bafdb7cb672c" path="#[p('fileLocation')]" outputMimeType="application/xlsx"/>
+		<set-payload value='#[%dw 2.0&#10;output application/dw&#10;---&#10;payload."Sheet1"]' doc:name="Making the incoming payload readable" doc:id="fbe0a3a7-2d38-476e-afb5-e0dc1fab4d05" />
+		<logger level="INFO" doc:name="Logging the incoming payload" doc:id="5768812e-ca41-4562-afc0-e9a23068c82f" message="Incoming payload : #[payload]"/>
+		<foreach doc:name="For Each" doc:id="fa61dc80-24cb-4a98-b26f-d7f06b7ead85" >
+			<set-variable value='#[vars.queryString splitBy ("=")]' doc:name="Setting the parameter to segregate by" doc:id="0ca15227-b1e6-4efe-8e16-87edf1c0b570" variableName="segBy"/>
+			<set-variable value="#[%dw 2.0&#10;output application/csv&#10;var dynamicVar = payload[vars.segBy[0] as String] as String&#10;---&#10;if (vars[dynamicVar] != null) (vars[dynamicVar] &lt;&lt; payload)&#10;else payload]" doc:name="Setting Dynamic Variable" doc:id="59f656a4-efe0-4deb-893c-aa4265e59b1f" variableName="#[output application/dw --- payload[vars.segBy[0] as String]]"/>
+		</foreach>
+		<email:send doc:name="Send an email with the records" doc:id="e45d4c9e-0833-495e-870a-89c67c12f8f3" config-ref="Email_SMTP" fromAddress="#[p('from.emailAddress')]" subject="Company Records">
+			<email:to-addresses >
+				<email:to-address value="#[p('to.emailAddress')]" />
+			</email:to-addresses>
+			<email:body contentType="text/plain" >
+				<email:content ><![CDATA[#[vars[vars.segBy[1]]]]]></email:content>
+			</email:body>
+		</email:send>
+	</flow>
+</mule>
