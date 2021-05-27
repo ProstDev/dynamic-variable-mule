@@ -22,7 +22,7 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
 	<flow name="dynamic-variable-muleFlow" doc:id="56f5a311-f954-45e2-80d3-db15a887df52" >
 		<http:listener doc:name="Listener" doc:id="ea95c793-fa20-4376-88d1-093a30f2ae28" config-ref="HTTP_Listener_config" path="/dynamic-var/*"/>
 		<set-variable value="#[attributes.queryString]" doc:name="Capturing the Query String" doc:id="d7b01235-be29-4149-83ef-ec6181fcfcc7" variableName="queryString"/>
-		<file:read doc:name="Reading the Source File" doc:id="4a827c34-ab22-4031-9e2a-bafdb7cb672c" path="#[p('fileLocation')]" outputMimeType="application/xlsx"/>
+		<file:read doc:name="Reading the Source File from system" doc:id="4a827c34-ab22-4031-9e2a-bafdb7cb672c" path="#[p('fileLocation')]" outputMimeType="application/xlsx"/>
 		<set-payload value='#[%dw 2.0&#10;output application/dw&#10;---&#10;payload."Sheet1"]' doc:name="Making the incoming payload readable" doc:id="fbe0a3a7-2d38-476e-afb5-e0dc1fab4d05" />
 		<logger level="INFO" doc:name="Logging the incoming payload" doc:id="5768812e-ca41-4562-afc0-e9a23068c82f" message="Incoming payload : #[payload]"/>
 		<foreach doc:name="For Each" doc:id="fa61dc80-24cb-4a98-b26f-d7f06b7ead85" >
